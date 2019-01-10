@@ -39,31 +39,31 @@ rt;
 int main()
 {
 	// http get
-	PUTS(curl::get("http://httpbin.org/get"));
+	PUTS(minicurl::get("http://httpbin.org/get"));
 	
 	// http get with query string
-	PUTS(curl::get("http://httpbin.org/get?testing=query"));
+	PUTS(minicurl::get("http://httpbin.org/get?testing=query"));
 	
 	// http get with header information
-	PUTS(curl::get("http://httpbin.org/headers", "testing:header"));
+	PUTS(minicurl::get("http://httpbin.org/headers", "testing:header"));
 	
 	// http get with multiple header information (as a list of strings)
-	PUTS(curl::get("http://httpbin.org/headers", {"testing:header", "more:header", "still;"}));
+	PUTS(minicurl::get("http://httpbin.org/headers", {"testing:header", "more:header", "still;"}));
 	
 	// http post without payload (same as http get)
-	PUTS(curl::post("http://httpbin.org/get"));
+	PUTS(minicurl::post("http://httpbin.org/get"));
 	
 	// http post with payload
-	PUTS(curl::post("http://httpbin.org/post", "tesing_payload"));
+	PUTS(minicurl::post("http://httpbin.org/post", "tesing_payload"));
 	
 	// http post with a stringfied json as payload
-	PUTS(curl::post("http://httpbin.org/post", "{testing:\"payload\"}"));
+	PUTS(minicurl::post("http://httpbin.org/post", "{testing:\"payload\"}"));
 	
 	// http post with payload and header information
-	PUTS(curl::post("http://httpbin.org/post", "{testing:\"payload\"}", "testing:header"));
+	PUTS(minicurl::post("http://httpbin.org/post", "{testing:\"payload\"}", "testing:header"));
 	
 	// http post with payload and multiple header information	
-	PUTS(curl::post("http://httpbin.org/post", "{testing:\"payload\"}", {"testing:header", "more:header", "still;"}));
+	PUTS(minicurl::post("http://httpbin.org/post", "{testing:\"payload\"}", {"testing:header", "more:header", "still;"}));
 	
 	return 0;
 }
