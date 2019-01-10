@@ -1,8 +1,8 @@
 # Minicurl
 
-> Type make in the terminal to compile and run the test (GCC 8.0.0 or later is required).
+> Type *make* in the terminal to compile and run the test (GCC 8.0.0 or later is required).
 
-> These library depends on *libcurl*. To install the latter in your system, in the terminal type:
+> This library depends on *libcurl*. To install the latter in your system, open the terminal and type:
 
 	sudo apt-get install -y -f --install-suggests --install-recommends curl libcurl4-openssl-dev
 
