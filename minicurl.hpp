@@ -1,5 +1,3 @@
-//sudo apt-get install -y curl libcurl4-openssl-dev
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // Minicurl
@@ -32,7 +30,7 @@
 #include <string>
 #include <curl/curl.h>
 	
-class curl
+class minicurl
 {
 	class chunk
 	{
@@ -84,21 +82,21 @@ class curl
 		return realsize;
 	}
 	
-	CURL * inner_curl;
+	CURL * curl;
 	
-	curl() : inner_curl(nullptr)
+	minicurl() : curl(nullptr)
 	{
 		curl_global_init(CURL_GLOBAL_ALL);
-		inner_curl = curl_easy_init();
-		assert(inner_curl);
-		curl_easy_setopt(inner_curl, CURLOPT_FOLLOWLOCATION, 1L);
-		curl_easy_setopt(inner_curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
-		curl_easy_setopt(inner_curl, CURLOPT_WRITEFUNCTION, curl_write_function);
+		curl = curl_easy_init();
+		assert(curl);
+		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+		curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_function);
 	}
 		
 	static auto & instantiate()
 	{
-		static curl singleton;
+		static minicurl singleton;
 		return singleton;
 	}
 	
@@ -107,25 +105,25 @@ class curl
 		auto response = std::string("");
 		struct curl_slist * header = nullptr;
 		for(auto const & i : headers) header = curl_slist_append(header, i.c_str());
-		curl_easy_setopt(inner_curl, CURLOPT_HTTPHEADER, header);
-		curl_easy_setopt(inner_curl, CURLOPT_URL, url.c_str());
-		if(payload.size()) curl_easy_setopt(inner_curl, CURLOPT_POSTFIELDS, payload.c_str());
+		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header);
+		curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+		if(payload.size()) curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload.c_str());
 		chunk raw_response;
-		curl_easy_setopt(inner_curl, CURLOPT_WRITEDATA, (void *) &raw_response);
-		if(curl_easy_perform(inner_curl) == CURLE_OK && raw_response.size) response = std::string(raw_response.data, raw_response.size);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &raw_response);
+		if(curl_easy_perform(curl) == CURLE_OK && raw_response.size) response = std::string(raw_response.data, raw_response.size);
 		curl_slist_free_all(header);
 		return response;
 	}
 	
 	public:
 	
-	curl(curl const &) = delete;
-	curl(curl &&) = delete;
-	curl & operator=(curl) = delete;
+	minicurl(minicurl const &) = delete;
+	minicurl(minicurl &&) = delete;
+	minicurl & operator=(minicurl) = delete;
 	
-	~curl()
+	~minicurl()
 	{
-		if(inner_curl) curl_easy_cleanup(inner_curl);
+		if(curl) curl_easy_cleanup(curl);
 		curl_global_cleanup();
 	}
 	
