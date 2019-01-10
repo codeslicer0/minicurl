@@ -69,7 +69,7 @@ class minicurl
 		~chunk() {if(data) free(data);}
 	};
 
-	static std::size_t curl_write_function(void * contents, std::size_t size, std::size_t memory, void * pointer)
+	static std::size_t write_function(void * contents, std::size_t size, std::size_t memory, void * pointer)
 	{
 		std::size_t realsize = size * memory;
 		chunk * mem = (chunk *) pointer;
@@ -91,7 +91,7 @@ class minicurl
 		assert(curl);
 		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 		curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_function);
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_function);
 	}
 		
 	static auto & instantiate()
