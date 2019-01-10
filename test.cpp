@@ -25,6 +25,7 @@
 
 #include <iostream>
 #include <chrono>
+#include <string>
 
 struct runtime
 {
@@ -33,7 +34,7 @@ struct runtime
 }
 rt;
 
-// macro to print the results
+// macro to print the responses (minicurl returns everything as std::string)
 #define PUTS(x); {std::cerr << (x) << '\n';}
 
 int main()
@@ -47,7 +48,7 @@ int main()
 	// http get with header information
 	PUTS(minicurl::get("http://httpbin.org/headers", "testing:header"));
 	
-	// http get with multiple header information (as a list of strings)
+	// http get with multiple header information (as a list or a vector of strings)
 	PUTS(minicurl::get("http://httpbin.org/headers", {"testing:header", "more:header", "still;"}));
 	
 	// http post without payload (same as http get)
