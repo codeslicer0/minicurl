@@ -48,13 +48,16 @@ int main()
 	// http get with header information
 	PUTS(minicurl::get("http://httpbin.org/headers", "testing:header"));
 	
+	// http get with header not valued information (note the semicolon instead of a colon)
+	PUTS(minicurl::get("http://httpbin.org/headers", "testing;"));
+	
 	// http get with multiple header information (as a list or a vector of strings)
 	PUTS(minicurl::get("http://httpbin.org/headers", {"testing:header", "more:header", "still;"}));
 	
 	// http post without payload (same as http get)
 	PUTS(minicurl::post("http://httpbin.org/get"));
 	
-	// http post with payload
+	// http post with payload (don't confuse this with get with header)
 	PUTS(minicurl::post("http://httpbin.org/post", "tesing_payload"));
 	
 	// http post with a stringfied json as payload
@@ -63,8 +66,14 @@ int main()
 	// http post with payload and header information
 	PUTS(minicurl::post("http://httpbin.org/post", "{testing:\"payload\"}", "testing:header"));
 	
-	// http post with payload and multiple header information	
+	// http post with payload and multiple header information
 	PUTS(minicurl::post("http://httpbin.org/post", "{testing:\"payload\"}", {"testing:header", "more:header", "still;"}));
+	
+	// http post with empty payload and with header information
+	PUTS(minicurl::post("http://httpbin.org/headers", "", {"testing:header", "more:header", "still;"}));
+	
+	// http post with everything!
+	PUTS(minicurl::post("http://httpbin.org/post?my_query", "my_payload", {"my_header;"}));
 	
 	return 0;
 }
