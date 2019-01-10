@@ -131,6 +131,7 @@ class curl
 	
 	static auto get(std::string const & url, std::string const & header = "")          {return instantiate().fetch(url, "", {header});}
 	static auto get(std::string const & url, std::vector<std::string> const & headers) {return instantiate().fetch(url, "", headers);}
+	
 	static auto post(std::string const & url, std::string const & payload = "", std::string const & header = "")     {return instantiate().fetch(url, payload, {header});}
 	static auto post(std::string const & url, std::string const & payload, std::vector<std::string> const & headers) {return instantiate().fetch(url, payload, headers);}
 };
