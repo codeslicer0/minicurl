@@ -24,15 +24,7 @@
 #include "minicurl.hpp"
 
 #include <iostream>
-#include <chrono>
 #include <string>
-
-struct runtime
-{
-	std::chrono::time_point<std::chrono::system_clock> start = std::chrono::high_resolution_clock::now();
-	~runtime() {std::cout << "Runtime: " << (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start)).count() << " ms\n";}
-}
-rt;
 
 // macro to print the responses (minicurl returns everything as std::string)
 #define PUTS(x); {std::cerr << (x) << '\n';}
@@ -48,7 +40,7 @@ int main()
 	// http get with header information
 	PUTS(minicurl::get("http://httpbin.org/headers", "testing:header"));
 	
-	// http get with header not valued information (note the semicolon instead of a colon)
+	// http get with not valued information in the header (note the semicolon instead of a colon)
 	PUTS(minicurl::get("http://httpbin.org/headers", "testing;"));
 	
 	// http get with multiple header information (as a list or a vector of strings)
@@ -72,7 +64,7 @@ int main()
 	// http post with empty payload and with header information
 	PUTS(minicurl::post("http://httpbin.org/headers", "", {"testing:header", "more:header", "still;"}));
 	
-	// http post with everything!
+	// http post with everything
 	PUTS(minicurl::post("http://httpbin.org/post?my_query", "my_payload", {"my_header;"}));
 	
 	return 0;
