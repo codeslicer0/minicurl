@@ -6,6 +6,6 @@
 
 	sudo apt-get install -y -f --install-suggests --install-recommends curl libcurl4-openssl-dev
 
-Minicurl is a very simple and limited single header C++ wrapper around *libcurl*, intended to make the use of HTTP GET and HTTP POST easier. Both methods were implemented as static methods and can be used anywhere in your code without the need to manually initialize or instantiate anything. However, note that an instance of CURL will be initialized on the first use of any of these methods, so the function *curl_global_init* will be called (as well as the function *curl_global_cleanup* will be called when the program ends). Since this may affect your code globally, we recommend you to use *minicurl* just in case all the REST requests your program does are gets and posts. Everything in *minicurl* is returned as std::string. Check the file *test.cpp* for examples.
+Minicurl is a **very simple and limited** single header C++ wrapper around *libcurl*, intended to make the use of HTTP GET and HTTP POST easier (other types of REST requests were not implemented). Both methods are static and can be used anywhere in your code without the need to manually initialize or instantiate anything. Be aware that the first call of any of them will also call the function *curl_global_init*, which is not thread-safe. Everything in *minicurl* is returned as std::string. Check the *test.cpp* file for examples.
 
 *Copyright 2019 Jean Diogo (aka [Jango](mailto:jeandiogo@gmail.com))*
