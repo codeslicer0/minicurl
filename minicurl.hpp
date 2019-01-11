@@ -32,10 +32,8 @@
 	
 class minicurl
 {
-	class chunk
+	struct chunk
 	{
-		public:
-		
 		std::size_t size;
 		char * data;
 		
@@ -64,9 +62,21 @@ class minicurl
 			else size = 0;
 		}
 		
-		chunk(chunk && c) : chunk() {swap(*this, c);}
-		chunk & operator=(chunk c) {swap(*this, c); return *this;}
-		~chunk() {if(data) free(data);}
+		chunk(chunk && c) : chunk()
+		{
+			swap(*this, c);
+		}
+		
+		chunk & operator=(chunk c)
+		{
+			swap(*this, c);
+			return *this;
+		}
+		
+		~chunk()
+		{
+			if(data) free(data);
+		}
 	};
 
 	static std::size_t write_function(void * contents, std::size_t size, std::size_t memory, void * pointer)
@@ -100,11 +110,11 @@ class minicurl
 		return singleton;
 	}
 	
-	auto fetch(std::string const & url, std::string const & payload = "", std::vector<std::string> const & headers = {})
+	auto fetch(std::string const & url, std::string const & payload, std::vector<std::string> const & headers)
 	{
 		auto response = std::string("");
 		struct curl_slist * header = nullptr;
-		for(auto const & i : headers) header = curl_slist_append(header, i.c_str());
+		for(auto const & i : headers) if(i.size()) header = curl_slist_append(header, i.c_str());
 		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header);
 		curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 		if(payload.size()) curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload.c_str());
