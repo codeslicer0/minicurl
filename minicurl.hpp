@@ -32,12 +32,14 @@
 	
 class minicurl
 {
+	CURL * curl;
+	
 	static auto & get_singleton()
 	{
 		static minicurl singleton;
 		return singleton;
 	}
-	
+		
 	struct chunk
 	{
 		std::size_t size;
@@ -68,21 +70,9 @@ class minicurl
 			else size = 0;
 		}
 		
-		chunk(chunk && c) : chunk()
-		{
-			swap(*this, c);
-		}
-		
-		chunk & operator=(chunk c)
-		{
-			swap(*this, c);
-			return *this;
-		}
-		
-		~chunk()
-		{
-			if(data) free(data);
-		}
+		chunk(chunk && c) : chunk() {swap(*this, c);}
+		chunk & operator=(chunk c) {swap(*this, c); return *this;}
+		~chunk() {if(data) free(data);}
 	};
 
 	static std::size_t write_function(void * contents, std::size_t size, std::size_t memory, void * pointer)
@@ -96,18 +86,6 @@ class minicurl
 		mem->size += realsize;
 		mem->data[mem->size] = 0;
 		return realsize;
-	}
-	
-	CURL * curl;
-	
-	minicurl() : curl(nullptr)
-	{
-		curl_global_init(CURL_GLOBAL_ALL);
-		curl = curl_easy_init();
-		assert(curl);
-		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-		curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_function);
 	}
 		
 	auto fetch(std::string const & url, std::string const & payload, std::vector<std::string> const & headers)
@@ -123,6 +101,16 @@ class minicurl
 		if(curl_easy_perform(curl) == CURLE_OK && raw_response.size) response = std::string(raw_response.data, raw_response.size);
 		curl_slist_free_all(header);
 		return response;
+	}
+	
+	minicurl() : curl(nullptr)
+	{
+		curl_global_init(CURL_GLOBAL_ALL);
+		curl = curl_easy_init();
+		assert(curl);
+		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+		curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_function);
 	}
 	
 	public:
