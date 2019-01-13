@@ -26,12 +26,18 @@
 
 #include <cassert>
 #include <cstring>
-#include <vector>
 #include <string>
+#include <vector>
 #include <curl/curl.h>
 	
 class minicurl
 {
+	static auto & get_singleton()
+	{
+		static minicurl singleton;
+		return singleton;
+	}
+	
 	struct chunk
 	{
 		std::size_t size;
@@ -104,12 +110,6 @@ class minicurl
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_function);
 	}
 		
-	static auto & instantiate()
-	{
-		static minicurl singleton;
-		return singleton;
-	}
-	
 	auto fetch(std::string const & url, std::string const & payload, std::vector<std::string> const & headers)
 	{
 		auto response = std::string("");
@@ -139,22 +139,22 @@ class minicurl
 	
 	static auto get(std::string const & url, std::string const & header)
 	{
-		return instantiate().fetch(url, "", {header});
+		return get_singleton().fetch(url, "", std::vector<std::string>({header}));
 	}
 	
 	static auto get(std::string const & url, std::vector<std::string> const & headers = {})
 	{
-		return instantiate().fetch(url, "", headers);
+		return get_singleton().fetch(url, "", headers);
 	}
 	
 	static auto post(std::string const & url, std::string const & payload, std::string const & header)
 	{
-		return instantiate().fetch(url, payload, {header});
+		return get_singleton().fetch(url, payload, std::vector<std::string>({header}));
 	}
 	
 	static auto post(std::string const & url, std::string const & payload = "", std::vector<std::string> const & headers = {})
 	{
-		return instantiate().fetch(url, payload, headers);
+		return get_singleton().fetch(url, payload, headers);
 	}
 };
 
