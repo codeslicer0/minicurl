@@ -24,48 +24,44 @@
 #include "minicurl.hpp"
 
 #include <iostream>
-#include <string>
-
-// macro to print the responses (minicurl returns everything as std::string)
-#define PUTS(x); {std::cerr << (x) << '\n';}
 
 int main()
 {
 	// http get
-	PUTS(minicurl::get("http://httpbin.org/get"));
+	std::cerr << minicurl::get("http://httpbin.org/get") << '\n';
 	
 	// http get with query string
-	PUTS(minicurl::get("http://httpbin.org/get?testing=query"));
+	std::cerr << minicurl::get("http://httpbin.org/get?testing=query") << '\n';
 	
 	// http get with header information
-	PUTS(minicurl::get("http://httpbin.org/headers", "testing:header"));
+	std::cerr << minicurl::get("http://httpbin.org/headers", "testing:header") << '\n';
 	
 	// http get with not valued information in the header (note the semicolon instead of a colon)
-	PUTS(minicurl::get("http://httpbin.org/headers", "testing;"));
+	std::cerr << minicurl::get("http://httpbin.org/headers", "testing;") << '\n';
 	
 	// http get with multiple header information (as a list or a vector of strings)
-	PUTS(minicurl::get("http://httpbin.org/headers", {"testing:header", "more:header", "still;"}));
+	std::cerr << minicurl::get("http://httpbin.org/headers", {"testing:header", "more:header", "still;"}) << '\n';
 	
 	// http post without payload (same as http get)
-	PUTS(minicurl::post("http://httpbin.org/get"));
+	std::cerr << minicurl::post("http://httpbin.org/get") << '\n';
 	
 	// http post with payload (don't confuse this with get with header)
-	PUTS(minicurl::post("http://httpbin.org/post", "tesing_payload"));
+	std::cerr << minicurl::post("http://httpbin.org/post", "tesing_payload") << '\n';
 	
 	// http post with a stringfied json as payload
-	PUTS(minicurl::post("http://httpbin.org/post", "{testing:\"payload\"}"));
+	std::cerr << minicurl::post("http://httpbin.org/post", "{testing:\"payload\"}") << '\n';
 	
 	// http post with payload and header information
-	PUTS(minicurl::post("http://httpbin.org/post", "{testing:\"payload\"}", "testing:header"));
+	std::cerr << minicurl::post("http://httpbin.org/post", "{testing:\"payload\"}", "testing:header") << '\n';
 	
 	// http post with payload and multiple header information
-	PUTS(minicurl::post("http://httpbin.org/post", "{testing:\"payload\"}", {"testing:header", "more:header", "still;"}));
+	std::cerr << minicurl::post("http://httpbin.org/post", "{testing:\"payload\"}", {"testing:header", "more:header", "still;"}) << '\n';
 	
 	// http post with empty payload and with header information
-	PUTS(minicurl::post("http://httpbin.org/headers", "", {"testing:header", "more:header", "still;"}));
+	std::cerr << minicurl::post("http://httpbin.org/headers", "", {"testing:header", "more:header", "still;"}) << '\n';
 	
 	// http post with everything
-	PUTS(minicurl::post("http://httpbin.org/post?my_query", "my_payload", {"my_header;"}));
+	std::cerr << minicurl::post("http://httpbin.org/post?my_query", "my_payload", {"my_header;"}) << '\n';
 	
 	return 0;
 }
