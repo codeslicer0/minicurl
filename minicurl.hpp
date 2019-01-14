@@ -86,13 +86,6 @@ class minicurl
 		}
 	};
 	
-	/*
-	static std::size_t read_function(void * buffer, std::size_t size, std::size_t count, FILE * stream)
-	{
-		return fread(buffer, size, count, stream);
-	}
-	*/
-	
 	static std::size_t write_function(void * buffer, std::size_t size, std::size_t count, void * stream)
 	{
 		std::size_t realsize = size * count;
