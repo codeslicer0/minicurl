@@ -32,8 +32,6 @@
 	
 class minicurl
 {
-	CURL * curl;
-	
 	static auto & get_singleton()
 	{
 		static minicurl singleton;
@@ -91,26 +89,28 @@ class minicurl
 	auto fetch(std::string const & url, std::string const & payload, std::vector<std::string> const & headers)
 	{
 		auto response = std::string("");
-		struct curl_slist * header = nullptr;
-		for(auto const & i : headers) if(i.size()) header = curl_slist_append(header, i.c_str());
-		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header);
-		curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-		if(payload.size()) curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload.c_str());
-		chunk raw_response;
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &raw_response);
-		if(curl_easy_perform(curl) == CURLE_OK && raw_response.size) response = std::string(raw_response.data, raw_response.size);
-		curl_slist_free_all(header);
+		CURL * curl = curl_easy_init();
+		if(curl)
+		{
+			curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+			curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_function);struct curl_slist * header = nullptr;
+			for(auto const & i : headers) if(i.size()) header = curl_slist_append(header, i.c_str());
+			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header);
+			curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+			if(payload.size()) curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload.c_str());
+			chunk raw_response;
+			curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &raw_response);
+			if(curl_easy_perform(curl) == CURLE_OK && raw_response.size) response = std::string(raw_response.data, raw_response.size);
+			curl_slist_free_all(header);
+			curl_easy_cleanup(curl);
+		}
 		return response;
 	}
 	
-	minicurl() : curl(nullptr)
+	minicurl()
 	{
 		curl_global_init(CURL_GLOBAL_ALL);
-		curl = curl_easy_init();
-		assert(curl);
-		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-		curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_function);
 	}
 	
 	public:
@@ -121,13 +121,7 @@ class minicurl
 	
 	~minicurl()
 	{
-		if(curl) curl_easy_cleanup(curl);
 		curl_global_cleanup();
-	}
-	
-	static auto get(std::string const & url, std::string const & header)
-	{
-		return get_singleton().fetch(url, "", std::vector<std::string>({header}));
 	}
 	
 	static auto get(std::string const & url, std::vector<std::string> const & headers = {})
@@ -135,12 +129,12 @@ class minicurl
 		return get_singleton().fetch(url, "", headers);
 	}
 	
-	static auto post(std::string const & url, std::string const & payload, std::string const & header)
+	static auto post(std::string const & url, std::vector<std::string> const & headers = {})
 	{
-		return get_singleton().fetch(url, payload, std::vector<std::string>({header}));
+		return get_singleton().fetch(url, "", headers);
 	}
 	
-	static auto post(std::string const & url, std::string const & payload = "", std::vector<std::string> const & headers = {})
+	static auto post(std::string const & url, std::string const & payload, std::vector<std::string> const & headers = {})
 	{
 		return get_singleton().fetch(url, payload, headers);
 	}
