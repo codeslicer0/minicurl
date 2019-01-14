@@ -36,19 +36,16 @@ int main()
 	// http get with header information (header always as a list)
 	std::cerr << minicurl::get("http://httpbin.org/get", {"testing:header"}) << '\n';
 	
-	// http get with not valued information in the header (note the semicolon instead of a colon)
+	// http get with not-valued information in the header (note the semicolon instead of a colon)
 	std::cerr << minicurl::get("http://httpbin.org/get", {"testing;"}) << '\n';
 	
 	// http get with multiple header information
 	std::cerr << minicurl::get("http://httpbin.org/get", {"testing:header", "more:header", "still;"}) << '\n';
 	
-	// http post without payload (same as http get)
-	std::cerr << minicurl::post("http://httpbin.org/get") << '\n';
-	
-	// http post with payload (plain text)
+	// http post with plain text as payload
 	std::cerr << minicurl::post("http://httpbin.org/post", "tesing_payload") << '\n';
-		
-	// http post with payload (stringfied json)
+	
+	// http post with stringfied json as payload
 	std::cerr << minicurl::post("http://httpbin.org/post", "{testing:\"payload\"}") << '\n';
 	
 	// http post with payload and query string
@@ -59,12 +56,6 @@ int main()
 	
 	// http post with payload and multiple header information
 	std::cerr << minicurl::post("http://httpbin.org/post", "{testing:\"payload\"}", {"testing:header", "more:header", "still;"}) << '\n';
-	
-	// http post without payload and with header information (same as http get with header)
-	std::cerr << minicurl::post("http://httpbin.org/get", {"testing:header", "more:header", "still;"}) << '\n';
 		
-	// http post with empty payload and header information (same as http get with header)
-	std::cerr << minicurl::post("http://httpbin.org/get", "", {"testing:header", "more:header", "still;"}) << '\n';
-	
 	return 0;
 }
