@@ -126,7 +126,7 @@ class minicurl
 			if(curl) curl_easy_cleanup(curl);
 			if(header) curl_slist_free_all(header);
 		}
-		return response.to_string();
+		return response;
 	}
 	
 	minicurl() {curl_global_init(CURL_GLOBAL_ALL);}
@@ -141,12 +141,12 @@ class minicurl
 	
 	static auto get(std::string const & url, std::vector<std::string> const & headers = {})
 	{
-		return get_singleton().fetch(url, "", headers);
+		return get_singleton().fetch(url, "", headers).to_string();
 	}
 	
 	static auto post(std::string const & url, std::string const & payload, std::vector<std::string> const & headers = {})
 	{
-		return get_singleton().fetch(url, payload, headers);
+		return get_singleton().fetch(url, payload, headers).to_string();
 	}
 };
 
