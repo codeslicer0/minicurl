@@ -135,8 +135,8 @@ class minicurl
 				curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
 				response.status = static_cast<std::size_t>(status / 3);
 			}
-			if(curl) curl_easy_cleanup(curl);
 			if(header) curl_slist_free_all(header);
+			curl_easy_cleanup(curl);
 		}
 		return response;
 	}
