@@ -8,6 +8,6 @@ Minicurl is a **very simple and limited** header-only C++ wrapper around libcurl
 
 > GCC 8 or later is required. To compile the test, open the terminal and type:
 
-	g++ test.cpp -o test.out -O3 -march=native -std=c++2a -lcurl
+	g++ test.cpp -o test.out -O3 -march=native -std=c++17 -lcurl
 
 *Copyright 2019 Jean Diogo (aka [Jango](mailto:jeandiogo@gmail.com))*
