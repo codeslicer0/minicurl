@@ -74,9 +74,21 @@ class minicurl
 			else size = 0;
 		}
 		
-		chunk(chunk && c) : chunk() {swap(*this, c);}
-		chunk & operator=(chunk c) {swap(*this, c); return *this;}
-		~chunk() {if(data) free(data);}
+		chunk(chunk && c) : chunk()
+		{
+			swap(*this, c);
+		}
+		
+		chunk & operator=(chunk c)
+		{
+			swap(*this, c);
+			return *this;
+		}
+		
+		~chunk()
+		{
+			if(data) free(data);
+		}
 		
 		auto to_string()
 		{
@@ -129,11 +141,17 @@ class minicurl
 		return response;
 	}
 	
-	minicurl() {curl_global_init(CURL_GLOBAL_ALL);}
+	minicurl()
+	{
+		curl_global_init(CURL_GLOBAL_ALL);
+	}
 	
 	public:
 	
-	~minicurl() {curl_global_cleanup();}
+	~minicurl()
+	{
+		curl_global_cleanup();
+	}
 	
 	minicurl(minicurl const &) = delete;
 	minicurl(minicurl &&) = delete;
