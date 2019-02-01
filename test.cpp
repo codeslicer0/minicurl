@@ -42,6 +42,9 @@ int main()
 	// http get with multiple header information
 	std::cerr << minicurl::get("http://httpbin.org/get", {"testing:header", "more:header", "still;"}) << '\n';
 	
+	// http post without payload (equivalent to get)
+	std::cerr << minicurl::post("http://httpbin.org/get") << '\n';
+	
 	// http post with plain text as payload
 	std::cerr << minicurl::post("http://httpbin.org/post", "tesing_payload") << '\n';
 	
