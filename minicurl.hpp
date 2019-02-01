@@ -74,21 +74,9 @@ class minicurl
 			else size = 0;
 		}
 		
-		chunk(chunk && c) : chunk()
-		{
-			swap(*this, c);
-		}
-		
-		chunk & operator=(chunk c)
-		{
-			swap(*this, c);
-			return *this;
-		}
-		
-		~chunk()
-		{
-			if(data) free(data);
-		}
+		chunk(chunk && c) : chunk() {swap(*this, c);}
+		chunk & operator=(chunk c) {swap(*this, c); return *this;}
+		~chunk() {if(data) free(data);}
 		
 		auto to_string()
 		{
