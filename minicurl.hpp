@@ -162,7 +162,7 @@ class minicurl
 		return get_singleton().fetch(url, "", headers).to_string();
 	}
 	
-	static auto post(std::string const & url, std::string const & payload, std::vector<std::string> const & headers = {})
+	static auto post(std::string const & url, std::string const & payload = "", std::vector<std::string> const & headers = {})
 	{
 		return get_singleton().fetch(url, payload, headers).to_string();
 	}
