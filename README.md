@@ -6,7 +6,7 @@ Minicurl is a **very simple and limited** header-only C++ wrapper around libcurl
 
 	sudo apt-get install -y -f --install-suggests --install-recommends curl libcurl4-openssl-dev
 
-> GCC 8 or later is required. To compile the test, open the terminal and type:
+> To compile the test, open the terminal and enter the command below (GCC 8 or later is required):
 
 	g++ test.cpp -o test.out -std=c++17 -lcurl
 
