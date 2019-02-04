@@ -26,13 +26,9 @@
 
 #include <cassert>
 #include <cstring>
-#include <curl/curl.h>
-#include <sys/stat.h>
-#include <sys/time.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <string>
 #include <vector>
+#include <curl/curl.h>
 	
 class minicurl
 {
