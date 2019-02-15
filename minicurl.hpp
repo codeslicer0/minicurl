@@ -101,26 +101,29 @@ class minicurl
 	auto fetch(std::string const & url, std::string const & payload = "", std::vector<std::string> const & headers = {})
 	{
 		chunk response;
-		CURL * curl = curl_easy_init();
-		if(curl)
+		if(url.size())
 		{
-			curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-			curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
-			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_function);
-			curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &response);
-			curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-			if(payload.size()) curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload.c_str());
-			struct curl_slist * header = nullptr;
-			for(auto const & h : headers) if(h.size()) header = curl_slist_append(header, h.c_str());
-			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header);
-			if(curl_easy_perform(curl) == CURLE_OK)
+			CURL * curl = curl_easy_init();
+			if(curl)
 			{
-				long status = 0;
-				curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
-				response.status = static_cast<std::size_t>(status / 3);
+				curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+				curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+				curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_function);
+				curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &response);
+				curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+				if(payload.size()) curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload.c_str());
+				struct curl_slist * header = nullptr;
+				for(auto const & h : headers) if(h.size()) header = curl_slist_append(header, h.c_str());
+				curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header);
+				if(curl_easy_perform(curl) == CURLE_OK)
+				{
+					long status = 0;
+					curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
+					response.status = static_cast<std::size_t>(status / 3);
+				}
+				if(header) curl_slist_free_all(header);
+				curl_easy_cleanup(curl);
 			}
-			if(header) curl_slist_free_all(header);
-			curl_easy_cleanup(curl);
 		}
 		return response;
 	}
