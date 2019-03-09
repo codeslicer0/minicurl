@@ -29,7 +29,7 @@
 #include <string>
 #include <vector>
 #include <curl/curl.h>
-	
+
 class minicurl
 {
 	static auto & get_singleton()
@@ -59,25 +59,43 @@ class minicurl
 			else size = 0;
 		}
 		
-		chunk(chunk const & c) : status(c.status), size(c.size)
+		chunk(chunk const & other) : status(other.status), size(other.size)
 		{
 			data = (char *) malloc(sizeof(char) * (size + 1));
 			if(data)
 			{
-				memcpy(data, c.data, size);
+				memcpy(data, other.data, size);
 				data[size] = '\0';
 			}
 			else size = 0;
 		}
 		
-		chunk(chunk && c) : chunk() {swap(*this, c);}
-		chunk & operator=(chunk c) {swap(*this, c); return *this;}
-		~chunk() {if(data) free(data);}
+		chunk(chunk && other) : chunk()
+		{
+			swap(*this, other);
+		}
+		
+		chunk & operator=(chunk other)
+		{
+			swap(*this, other);
+			return *this;
+		}
+		
+		~chunk()
+		{
+			if(data)
+			{
+				free(data);
+				data = nullptr;
+				size = 0;
+				status = 0;
+			}
+		}
 		
 		auto to_string()
 		{
-			auto content = std::string("");
-			if(size) content = std::string(data, size);
+			auto content = std::string();
+			if(size && data) content = std::string(data, size);
 			return content;
 		}
 	};
@@ -98,7 +116,7 @@ class minicurl
 		return realsize;
 	}
 	
-	auto fetch(std::string const & url, std::string const & payload = "", std::vector<std::string> const & headers = {})
+	auto fetch(std::string const & url, std::string const & content, std::vector<std::string> const & headers)
 	{
 		chunk response;
 		if(url.size())
@@ -111,7 +129,7 @@ class minicurl
 				curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_function);
 				curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &response);
 				curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-				if(payload.size()) curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload.c_str());
+				if(content.size()) curl_easy_setopt(curl, CURLOPT_POSTFIELDS, content.c_str());
 				struct curl_slist * header = nullptr;
 				for(auto const & h : headers) if(h.size()) header = curl_slist_append(header, h.c_str());
 				curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header);
@@ -119,7 +137,7 @@ class minicurl
 				{
 					long status = 0;
 					curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
-					response.status = static_cast<std::size_t>(status / 3);
+					response.status = static_cast<std::size_t>(status);
 				}
 				if(header) curl_slist_free_all(header);
 				curl_easy_cleanup(curl);
@@ -149,9 +167,9 @@ class minicurl
 		return get_singleton().fetch(url, "", headers).to_string();
 	}
 	
-	static auto post(std::string const & url, std::string const & payload = "", std::vector<std::string> const & headers = {})
+	static auto post(std::string const & url, std::string const & content = "", std::vector<std::string> const & headers = {})
 	{
-		return get_singleton().fetch(url, payload, headers).to_string();
+		return get_singleton().fetch(url, content, headers).to_string();
 	}
 };
 
