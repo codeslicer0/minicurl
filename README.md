@@ -4,7 +4,7 @@ Minicurl is a **very simple and limited** header-only C++ wrapper around libcurl
 
 > This library depends on libcurl. To install the latter in your system, open the terminal and type:
 
-	sudo apt-get install -y -f --install-suggests --install-recommends curl libcurl4-openssl-dev
+	sudo apt-get install -y -f --install-suggests curl libcurl4-openssl-dev
 
 > To compile the test, open the terminal and enter the command below (GCC 8 or later is required):
 
