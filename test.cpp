@@ -33,7 +33,7 @@ int main()
 	// http get with query string
 	std::cerr << minicurl::get("http://httpbin.org/get?testing=query") << '\n';
 	
-	// http get with header information (header always as a list)
+	// http get with header information (header always sent as a list)
 	std::cerr << minicurl::get("http://httpbin.org/get", {"testing:header"}) << '\n';
 	
 	// http get with not-valued information in the header (note the semicolon instead of a colon)
