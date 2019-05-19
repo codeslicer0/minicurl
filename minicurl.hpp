@@ -207,19 +207,16 @@ class minicurl
 			CURL * curl = curl_easy_init();
 			if(curl)
 			{
-				// config get
 				curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_function);
 				curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, write_function);
 				curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &content);
 				curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *) &header);
 				
-				// config post
 				if(payload.size())
 				{
 					curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload.c_str());
 				}
 				
-				// config upload
 				FILE * file = nullptr;
 				if(filename.size() && (file = fopen(filename.c_str(), "rb")))
 				{
@@ -232,7 +229,6 @@ class minicurl
 					}
 				}
 				
-				// config headers
 				struct curl_slist * header_list = nullptr;
 				for(auto h : headers)
 				{
@@ -248,7 +244,6 @@ class minicurl
 				}
 				curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header_list);
 				
-				// fetch
 				curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 				curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
 				curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
@@ -259,7 +254,6 @@ class minicurl
 					status = static_cast<std::size_t>(status_code);
 				}
 				
-				// cleanup
 				if(file)
 				{
 					fclose(file);
