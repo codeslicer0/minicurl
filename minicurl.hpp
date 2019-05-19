@@ -24,12 +24,17 @@
 #ifndef MINICURL_HPP
 #define MINICURL_HPP
 
-#include <cassert>
 #include <cstring>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <curl/curl.h>
+#include <iostream>
+#include <fstream>
 #include <string>
 #include <vector>
-#include <curl/curl.h>
-
+ 
 class minicurl
 {
 	static auto & get_singleton()
@@ -40,26 +45,30 @@ class minicurl
 	
 	struct chunk
 	{
-		std::size_t status;
 		std::size_t size;
 		char * data;
 		
-		friend void swap(chunk & x, chunk & y)
+		friend auto swap(chunk & x, chunk & y)
 		{
 			using std::swap;
-			swap(x.status, y.status);
 			swap(x.size, y.size);
 			swap(x.data, y.data);
 		}
 		
-		chunk(std::size_t s = 0) : status(0), size(s)
+		chunk(std::size_t s = 0) : size(s)
 		{
 			data = (char *) malloc(sizeof(char) * (size + 1));
-			if(data) data[size] = '\0';
-			else size = 0;
+			if(data)
+			{
+				data[size] = '\0';
+			}
+			else
+			{
+				size = 0;
+			}
 		}
 		
-		chunk(chunk const & other) : status(other.status), size(other.size)
+		chunk(chunk const & other) : size(other.size)
 		{
 			data = (char *) malloc(sizeof(char) * (size + 1));
 			if(data)
@@ -67,7 +76,10 @@ class minicurl
 				memcpy(data, other.data, size);
 				data[size] = '\0';
 			}
-			else size = 0;
+			else
+			{
+				size = 0;
+			}
 		}
 		
 		chunk(chunk && other) : chunk()
@@ -87,20 +99,85 @@ class minicurl
 			{
 				free(data);
 				data = nullptr;
-				size = 0;
-				status = 0;
 			}
+			size = 0;
 		}
 		
 		auto to_string()
 		{
-			auto content = std::string();
-			if(size && data) content = std::string(data, size);
+			std::string content = "";
+			if(size && data)
+			{
+				content = std::string(data, size);
+			}
 			return content;
 		}
 	};
 	
-	static std::size_t write_function(void * buffer, std::size_t size, std::size_t count, void * stream)
+	struct package
+	{
+		std::size_t status = 0;
+		chunk header;
+		chunk content;
+		
+		friend auto swap(package & x, package & y)
+		{
+			using std::swap;
+			swap(x.status, y.status);
+			swap(x.header, y.header);
+			swap(x.content, y.content);
+		}
+		
+		package()
+		{
+		}
+		
+		package(std::size_t s, chunk const & h, chunk const & c) : status(s), header(h), content(c)
+		{
+		}
+		
+		package(package const & other) : status(other.status), header(other.header), content(other.content)
+		{
+		}
+		
+		package(package && other) : package()
+		{
+			swap(*this, other);
+		}
+		
+		auto & operator=(package other)
+		{
+			swap(*this, other);
+			return *this;
+		}
+		
+		~package()
+		{
+			status = 0;
+		}
+	};
+	
+	static auto split(std::string const & data, std::string const & delimiters = " \n\t")
+	{
+		std::vector<std::string> tokens;
+		auto const size = data.size();
+		if(size)
+		{
+			std::size_t current = 0;
+			for(std::size_t i = 0; i < size; ++i)
+			{
+				if(strchr(delimiters.c_str(), data[i]))
+				{
+					tokens.emplace_back(&(data[current]), (i - current));
+					current = i + 1;
+				}
+			}
+			tokens.emplace_back(&(data[current]), (size - current));
+		}
+		return tokens;
+	}
+	
+	static auto write_function(void * buffer, std::size_t size, std::size_t count, void * stream)
 	{
 		std::size_t realsize = size * count;
 		chunk * memory = (chunk *) stream;
@@ -112,38 +189,90 @@ class minicurl
 			memory->size += realsize;
 			memory->data[memory->size] = 0;
 		}
-		else realsize = 0;
+		else
+		{
+			realsize = 0;
+		}
 		return realsize;
 	}
 	
-	auto fetch(std::string const & url, std::string const & content, std::vector<std::string> const & headers)
+	auto fetch(std::string const & url, std::string const & payload, std::string const & filename, std::vector<std::string> const & headers)
 	{
-		chunk response;
+		std::size_t status = 0;
+		chunk header;
+		chunk content;
+		
 		if(url.size())
 		{
 			CURL * curl = curl_easy_init();
 			if(curl)
 			{
-				curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-				curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+				// config get
 				curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_function);
-				curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &response);
+				curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, write_function);
+				curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &content);
+				curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *) &header);
+				
+				// config post
+				if(payload.size())
+				{
+					curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload.c_str());
+				}
+				
+				// config upload
+				FILE * file = nullptr;
+				if(filename.size() && (file = fopen(filename.c_str(), "rb")))
+				{
+					struct stat file_stat;
+					if(fstat(fileno(file), &file_stat) == 0)
+					{
+						curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
+						curl_easy_setopt(curl, CURLOPT_READDATA, file);
+						curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, file_stat.st_size);
+					}
+				}
+				
+				// config headers
+				struct curl_slist * header_list = nullptr;
+				for(auto h : headers)
+				{
+					if(h.size())
+					{
+						auto tokens = split(h, ":");
+						if((tokens.size() == 1 || (tokens.size() == 2 && tokens[1].empty())) && tokens[0].back() != ';')
+						{
+							h = tokens.front() + ";";
+						}
+						header_list = curl_slist_append(header_list, h.c_str());
+					}
+				}
+				curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header_list);
+				
+				// fetch
 				curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-				if(content.size()) curl_easy_setopt(curl, CURLOPT_POSTFIELDS, content.c_str());
-				struct curl_slist * header = nullptr;
-				for(auto const & h : headers) if(h.size()) header = curl_slist_append(header, h.c_str());
-				curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header);
+				curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+				curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 				if(curl_easy_perform(curl) == CURLE_OK)
 				{
-					long status = 0;
-					curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
-					response.status = static_cast<std::size_t>(status);
+					long status_code = 0;
+					curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status_code);
+					status = static_cast<std::size_t>(status_code);
 				}
-				if(header) curl_slist_free_all(header);
+				
+				// cleanup
+				if(file)
+				{
+					fclose(file);
+				}
+				if(header_list)
+				{
+					curl_slist_free_all(header_list);
+				}
 				curl_easy_cleanup(curl);
 			}
 		}
-		return response;
+		
+		return package(status, header, content);
 	}
 	
 	minicurl()
@@ -164,12 +293,42 @@ class minicurl
 	
 	static auto get(std::string const & url, std::vector<std::string> const & headers = {})
 	{
-		return get_singleton().fetch(url, "", headers).to_string();
+		return get_singleton().fetch(url, "", "", headers).content.to_string();
 	}
 	
-	static auto post(std::string const & url, std::string const & content = "", std::vector<std::string> const & headers = {})
+	static auto get_header(std::string const & url, std::vector<std::string> const & headers = {})
 	{
-		return get_singleton().fetch(url, content, headers).to_string();
+		return get_singleton().fetch(url, "", "", headers).header.to_string();
+	}
+	
+	static auto post(std::string const & url, std::string const & payload, std::vector<std::string> const & headers = {"Content-Type: text/plain"})
+	{
+		return get_singleton().fetch(url, payload, "", headers).content.to_string();
+	}
+	
+	static auto upload(std::string const & url, std::string const & filename, std::vector<std::string> const & headers = {"Content-Type: text/plain"})
+	{
+		return get_singleton().fetch(url, "", filename, headers).content.to_string();
+	}
+	
+	static auto download(std::string const & url, std::string const & filename = "", std::vector<std::string> const & headers = {})
+	{
+		if(url.size())
+		{
+			auto confirmed_filename = filename.size() ? filename : split(url, "/").back();
+			auto file = std::fstream(confirmed_filename, std::fstream::out | std::fstream::binary);
+			if(file.good())
+			{
+				auto chunk = get_singleton().fetch(url, "", "", headers).content;
+				if(chunk.size > 1)
+				{
+					file << chunk.data << std::flush;
+				}
+				file.close();
+				return confirmed_filename;
+			}
+		}
+		return std::string("");
 	}
 };
 
