@@ -27,38 +27,23 @@
 
 int main()
 {
-	// http get
-	std::cerr << minicurl::get("http://httpbin.org/get") << '\n';
+	std::cerr << "HTTP GET:\n\n" << minicurl::get("http://httpbin.org/get") << "\n\n";
 	
-	// http get with query string
-	std::cerr << minicurl::get("http://httpbin.org/get?testing=query") << '\n';
+	std::cerr << "HTTP GET with query string:\n\n" << minicurl::get("http://httpbin.org/get?HELLO=WORLD") << "\n\n";
 	
-	// http get with header information (header always sent as a list)
-	std::cerr << minicurl::get("http://httpbin.org/get", {"testing:header"}) << '\n';
+	std::cerr << "HTTP GET with header information:\n\n" << minicurl::get("http://httpbin.org/get", {"HELLO:WORLD", "GOODBYE:WORLD"}) << "\n\n";
 	
-	// http get with not-valued information in the header (note the semicolon instead of a colon)
-	std::cerr << minicurl::get("http://httpbin.org/get", {"testing;"}) << '\n';
+	std::cerr << "HTTP GET with non-valued header information:\n\n" << minicurl::get("http://httpbin.org/get", {"HELLO:", "WORLD;", "GOODBYE"}) << "\n\n";
 	
-	// http get with multiple header information
-	std::cerr << minicurl::get("http://httpbin.org/get", {"testing:header", "more:header", "still;"}) << '\n';
+	std::cerr << "HTTP POST with plain text as payload:\n\n" << minicurl::post("http://httpbin.org/post", "HELLO_WORLD") << "\n\n";
 	
-	// http post without payload (equivalent to get)
-	std::cerr << minicurl::post("http://httpbin.org/get") << '\n';
+	std::cerr << "HTTP POST with stringfied json as payload:\n\n" << minicurl::post("http://httpbin.org/post", "{HELLO:\"WORLD\"}") << "\n\n";
 	
-	// http post with plain text as payload
-	std::cerr << minicurl::post("http://httpbin.org/post", "tesing_payload") << '\n';
+	std::cerr << "Getting header information:\n\n" << minicurl::get_header("http://httpbin.org/get") << "\n\n";
 	
-	// http post with stringfied json as payload
-	std::cerr << minicurl::post("http://httpbin.org/post", "{testing:\"payload\"}") << '\n';
+	std::cerr << "Uploading a file to an address:\n\n" << minicurl::upload("https://httpbin.org/put", "README.md") << "\n\n";
 	
-	// http post with payload and query string
-	std::cerr << minicurl::post("http://httpbin.org/post?testing=query", "{testing:\"payload\"}") << '\n';
-		
-	// http post with payload and header information
-	std::cerr << minicurl::post("http://httpbin.org/post", "{testing:\"payload\"}", {"testing:header"}) << '\n';
+	std::cerr << "Downloading to an optionally specified file (returns filename if succeeded, return empty string if failed):\n\n" << minicurl::download("http://httpbin.org/get", "DOWNLOADED.txt") << "\n\n";
 	
-	// http post with payload and multiple header information
-	std::cerr << minicurl::post("http://httpbin.org/post", "{testing:\"payload\"}", {"testing:header", "more:header", "still;"}) << '\n';
-		
 	return 0;
 }
