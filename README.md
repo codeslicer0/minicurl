@@ -1,6 +1,6 @@
 # Minicurl
 
-Minicurl is a **very simple and limited** header-only C++ wrapper around libcurl, intended to make easier the use of HTTP GET and HTTP POST, as well as file uploading and downloading. All methods were implemented as static member functions and they can be used anywhere in your code without the need to manually initialize or instantiate anything. Be aware that the first call to any of them will also call the function *curl_global_init*, which is not thread-safe. The results are always returned as std::string. Check *test.cpp* for examples.
+Minicurl is a **very simple and limited** header-only C++ wrapper around libcurl, intended to make easier the use of HTTP GET, HTTP POST, file upload, and file download. All methods were implemented as static member functions and they can be used anywhere in your code without the need to manually initialize or instantiate anything. Be aware that the first call to any of them will also call the function *curl_global_init*, which is not thread-safe. The results are always returned as std::string. Check *test.cpp* for examples.
 
 > This library depends on libcurl. To install the latter in your system, open the terminal and type:
 
