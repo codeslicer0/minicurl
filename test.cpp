@@ -37,13 +37,13 @@ int main()
 	
 	std::cerr << "HTTP POST with plain text as payload:\n\n" << minicurl::post("http://httpbin.org/post", "HELLO_WORLD") << "\n\n";
 	
-	std::cerr << "HTTP POST with stringfied json as payload:\n\n" << minicurl::post("http://httpbin.org/post", "{HELLO:\"WORLD\"}") << "\n\n";
+	std::cerr << "HTTP POST with stringfied json as payload:\n\n" << minicurl::post("http://httpbin.org/post", "{HELLO:\"WORLD\"}", {"Content-type: application/json"}) << "\n\n";
 	
 	std::cerr << "Getting header information:\n\n" << minicurl::get_header("http://httpbin.org/get") << "\n\n";
 	
 	std::cerr << "Uploading a file to an address:\n\n" << minicurl::upload("https://httpbin.org/put", "README.md") << "\n\n";
 	
-	std::cerr << "Downloading to an optionally specified file (returns filename if succeeded, return empty string if failed):\n\n" << minicurl::download("http://httpbin.org/get", "DOWNLOADED.txt") << "\n\n";
+	std::cerr << "Downloading to an optionally specified file (returns filename if succeeded, empty string if failed):\n\n" << minicurl::download("http://httpbin.org/get", "DOWNLOADED.txt") << "\n\n";
 	
 	return 0;
 }
