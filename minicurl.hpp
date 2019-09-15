@@ -24,6 +24,8 @@
 #ifndef MINICURL_HPP
 #define MINICURL_HPP
 
+#ifdef LINUX
+
 #include <cstring>
 #include <unistd.h>
 #include <fcntl.h>
@@ -34,6 +36,17 @@
 #include <fstream>
 #include <string>
 #include <vector>
+
+#else
+
+#include <cstring>
+#include <curl/curl.h>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <vector>
+
+#endif
 
 class minicurl
 {
