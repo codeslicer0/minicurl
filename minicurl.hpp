@@ -24,7 +24,7 @@
 #ifndef MINICURL_HPP
 #define MINICURL_HPP
 
-#ifdef LINUX
+#ifndef WINDOWS
 
 #include <cstring>
 #include <unistd.h>
@@ -61,7 +61,7 @@ class minicurl
 		std::size_t size;
 		char * data;
 
-		friend auto swap(chunk & x, chunk & y)
+		friend void swap(chunk & x, chunk & y)
 		{
 			using std::swap;
 			swap(x.size, y.size);
