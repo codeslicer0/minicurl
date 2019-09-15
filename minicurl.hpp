@@ -50,7 +50,7 @@
 
 class minicurl
 {
-	static auto & get_singleton()
+	static minicurl& get_singleton()
 	{
 		static minicurl singleton;
 		return singleton;
@@ -144,7 +144,7 @@ class minicurl
 #pragma region Error Handling
 		bool isValid() const
 		{
-			return content.size > 1 && !hasErrors();
+			return !isEmpty() && !hasErrors();
 		}
 		
 		bool hasErrors() const
@@ -185,7 +185,7 @@ class minicurl
 			content.save(file);
 		}
 		
-		friend auto swap(package & x, package & y)
+		friend void swap(package & x, package & y)
 		{
 			using std::swap;
 			swap(x.status, y.status);
@@ -210,7 +210,7 @@ class minicurl
 			swap(*this, other);
 		}
 		
-		auto & operator=(package other)
+		package& operator=(package other)
 		{
 			swap(*this, other);
 			return *this;
@@ -222,10 +222,10 @@ class minicurl
 		}
 	};
 	
-	static auto split(std::string const & data, std::string const & delimiters = " \n\t")
+	static std::vector<std::string> split(std::string const & data, std::string const & delimiters = " \n\t")
 	{
 		std::vector<std::string> tokens;
-		auto const size = data.size();
+		size_t const size = data.size();
 		if(size)
 		{
 			std::size_t current = 0;
@@ -345,7 +345,7 @@ class minicurl
 		return DebugInfoSize;
 	}
 	
-	static auto write_function(void * buffer, std::size_t size, std::size_t count, void * stream)
+	static size_t write_function(void * buffer, std::size_t size, std::size_t count, void * stream)
 	{
 		std::size_t realsize = size * count;
 		chunk * memory = (chunk *) stream;
@@ -364,7 +364,7 @@ class minicurl
 		return realsize;
 	}
 	
-	auto fetch(std::string const & url, std::string const & payload, std::string const & filename, std::vector<std::string> const & headers)
+	package fetch(std::string const & url, std::string const & payload, std::string const & filename, std::vector<std::string> const & headers)
 	{
 		std::size_t status = 0;
 		chunk header;
@@ -404,7 +404,7 @@ class minicurl
 				
 				bool bHasContentLength = false;
 				struct curl_slist * header_list = nullptr;
-				for(auto h : headers)
+				for(std::string h : headers)
 				{
 					if(h.size())
 					{
@@ -469,27 +469,27 @@ class minicurl
 	minicurl(minicurl &&) = delete;
 	minicurl & operator=(minicurl) = delete;
 	
-	static auto get(std::string const & url, std::vector<std::string> const & headers = {})
+	static std::string get(std::string const & url, std::vector<std::string> const & headers = {})
 	{
 		return get_singleton().fetch(url, "", "", headers).content.to_string();
 	}
 	
-	static auto get_header(std::string const & url, std::vector<std::string> const & headers = {})
+	static std::string get_header(std::string const & url, std::vector<std::string> const & headers = {})
 	{
 		return get_singleton().fetch(url, "", "", headers).header.to_string();
 	}
 	
-	static auto post(std::string const & url, std::string const & payload, std::vector<std::string> const & headers = {"Content-Type: text/plain"})
+	static std::string post(std::string const & url, std::string const & payload, std::vector<std::string> const & headers = {"Content-Type: text/plain"})
 	{
 		return get_singleton().fetch(url, payload, "", headers).content.to_string();
 	}
 	
-	static auto upload(std::string const & url, std::string const & filename, std::vector<std::string> const & headers = {"Content-Type: text/plain"})
+	static std::string upload(std::string const & url, std::string const & filename, std::vector<std::string> const & headers = {"Content-Type: text/plain"})
 	{
 		return get_singleton().fetch(url, "", filename, headers).content.to_string();
 	}
 	
-	static auto download(std::string const & url, std::string const & filename = "", std::vector<std::string> const & headers = {})
+	static std::string download(std::string const & url, std::string const & filename = "", std::vector<std::string> const & headers = {})
 	{
 		if(url.size())
 		{
