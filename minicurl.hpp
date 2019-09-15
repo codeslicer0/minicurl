@@ -176,18 +176,121 @@ class minicurl
 		}
 		return tokens;
 	}
+
+	static size_t debug_function(CURL * Handle, curl_infotype DebugInfoType, char * DebugInfo, size_t DebugInfoSize, void* UserData)
+	{
+		switch (DebugInfoType)
+		{
+		case CURLINFO_TEXT:
+		{
+			// in this case DebugInfo is a C string (see http://curl.haxx.se/libcurl/c/debug.html)
+			// C string is not null terminated:  https://curl.haxx.se/libcurl/c/CURLOPT_DEBUGFUNCTION.html
+
+			// Truncate at 1023 characters. This is just an arbitrary number based on a buffer size seen in
+			// the libcurl code.
+			DebugInfoSize = min(DebugInfoSize, (size_t)1023);
+
+			// Calculate the actual length of the string due to incorrect use of snprintf() in lib/vtls/openssl.c.
+			char* FoundNulPtr = (char*)memchr(DebugInfo, 0, DebugInfoSize);
+			int CalculatedSize = FoundNulPtr != nullptr ? FoundNulPtr - DebugInfo : DebugInfoSize;
+
+			std::string DebugText(DebugInfo, CalculatedSize);
+
+			//findAndReplaceAll(DebugText, "\n", "");
+			//findAndReplaceAll(DebugText, "\r", "");
+
+			std::cout << DebugText << "\n";
+		}
+		break;
+
+		case CURLINFO_HEADER_IN:
+			std::cout << "Received header (" << DebugInfoSize << "bytes)\n";
+			break;
+
+		case CURLINFO_HEADER_OUT:
+		{
+			// C string is not null terminated:  https://curl.haxx.se/libcurl/c/CURLOPT_DEBUGFUNCTION.html
+
+			// Scan for \r\n\r\n.  According to some code in tool_cb_dbg.c, special processing is needed for
+			// CURLINFO_HEADER_OUT blocks when containing both headers and data (which may be binary).
+			//
+			// Truncate at 1023 characters. This is just an arbitrary number based on a buffer size seen in
+			// the libcurl code.
+			int RecalculatedSize = min(DebugInfoSize, (size_t)1023);
+			for (int Index = 0; Index <= RecalculatedSize - 4; ++Index)
+			{
+				if (DebugInfo[Index] == '\r' && DebugInfo[Index + 1] == '\n'
+					&& DebugInfo[Index + 2] == '\r' && DebugInfo[Index + 3] == '\n')
+				{
+					RecalculatedSize = Index;
+					break;
+				}
+			}
+
+			// As lib/http.c states that CURLINFO_HEADER_OUT may contain binary data, only print it if
+			// the header data is readable.
+			bool bIsPrintable = true;
+			for (int Index = 0; Index < RecalculatedSize; ++Index)
+			{
+				unsigned char Ch = DebugInfo[Index];
+				if (!isprint(Ch) && !isspace(Ch))
+				{
+					bIsPrintable = false;
+					break;
+				}
+			}
+
+			if (bIsPrintable)
+			{
+				std::string DebugText(DebugInfo, RecalculatedSize);
+
+				//findAndReplaceAll(DebugText, "\n", "");
+				//findAndReplaceAll(DebugText, "\r", "");
+
+				std::cout << "Sent header (" << RecalculatedSize << " bytes) - " << DebugText << "\n";
+			}
+			else
+			{
+				std::cout << "Sent header (" << RecalculatedSize << " bytes) - contains binary data\n";
+			}
+		}
+		break;
+
+		case CURLINFO_DATA_IN:
+			std::cout << "Received data (" << DebugInfoSize << " bytes)\n";
+			break;
+
+		case CURLINFO_DATA_OUT:
+			std::cout << "Sent data (" << DebugInfoSize << " bytes)\n";
+			break;
+
+		case CURLINFO_SSL_DATA_IN:
+			std::cout << "Received SSL data (" << DebugInfoSize << " bytes)\n";
+			break;
+
+		case CURLINFO_SSL_DATA_OUT:
+			std::cout << "Sent SSL data (" << DebugInfoSize << " bytes)\n";
+			break;
+
+		default:
+			std::cerr << "DebugCallback: Unknown DebugInfoType=" << (int)DebugInfoType << "(DebugInfoSize: " << DebugInfoSize << " bytes)\n";
+			break;
+		}
+
+		return DebugInfoSize;
+	}
 	
 	static auto write_function(void * buffer, std::size_t size, std::size_t count, void * stream)
 	{
 		std::size_t realsize = size * count;
 		chunk * memory = (chunk *) stream;
-		char * aux = (char *) realloc(memory->data, memory->size + realsize + 1);
+		char * aux = (char *) realloc(memory->data, memory->size + realsize);
 		if(aux)
 		{
+			// save stream as is without adding the null terminator
 			memory->data = aux;
-			memcpy(&(memory->data[memory->size]), buffer, realsize);
+			memcpy(memory->data + memory->size, buffer, realsize);
 			memory->size += realsize;
-			memory->data[memory->size] = 0;
 		}
 		else
 		{
@@ -211,6 +314,11 @@ class minicurl
 				curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, write_function);
 				curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &content);
 				curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *) &header);
+
+				// Always setup the debug function to allow for activity to be tracked
+				curl_easy_setopt(curl, CURLOPT_DEBUGDATA, this);
+				curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, debug_function);
+				curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 				
 				if(payload.size())
 				{
@@ -229,6 +337,7 @@ class minicurl
 					}
 				}
 				
+				bool bHasContentLength = false;
 				struct curl_slist * header_list = nullptr;
 				for(auto h : headers)
 				{
@@ -237,17 +346,27 @@ class minicurl
 						auto tokens = split(h, ":");
 						if((tokens.size() == 1 || (tokens.size() == 2 && tokens[1].empty())) && tokens[0].back() != ';')
 						{
+							if (tokens.front() == "Content-Length")
+								bHasContentLength = true;
+
 							h = tokens.front() + ";";
 						}
 						header_list = curl_slist_append(header_list, h.c_str());
 					}
 				}
+
+				// content-length should be present http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.4
+				if (bHasContentLength)
+					header_list = curl_slist_append(header_list, "Content-Length: -1");
+
 				curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header_list);
 				
 				curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 				curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
 				curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-				if(curl_easy_perform(curl) == CURLE_OK)
+
+				CURLcode res = curl_easy_perform(curl);
+				if(res == CURLE_OK)
 				{
 					long status_code = 0;
 					curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status_code);
@@ -313,7 +432,8 @@ class minicurl
 			auto file = std::fstream(confirmed_filename, std::fstream::out | std::fstream::binary);
 			if(file.good())
 			{
-				auto chunk = get_singleton().fetch(url, "", "", headers).content;
+				// combile url and filename to get the full url path
+				auto chunk = get_singleton().fetch(url + filename, "", "", headers).content;
 				if(chunk.size > 1)
 				{
 					file << chunk.data << std::flush;
