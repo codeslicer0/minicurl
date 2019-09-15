@@ -34,7 +34,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
- 
+
 class minicurl
 {
 	static auto & get_singleton()
@@ -47,18 +47,18 @@ class minicurl
 	{
 		std::size_t size;
 		char * data;
-		
+
 		friend auto swap(chunk & x, chunk & y)
 		{
 			using std::swap;
 			swap(x.size, y.size);
 			swap(x.data, y.data);
 		}
-		
+
 		chunk(std::size_t s = 0) : size(s)
 		{
-			data = (char *) malloc(sizeof(char) * (size + 1));
-			if(data)
+			data = (char *)malloc(sizeof(char) * (size + 1));
+			if (data)
 			{
 				data[size] = '\0';
 			}
@@ -67,11 +67,11 @@ class minicurl
 				size = 0;
 			}
 		}
-		
+
 		chunk(chunk const & other) : size(other.size)
 		{
-			data = (char *) malloc(sizeof(char) * (size + 1));
-			if(data)
+			data = (char *)malloc(sizeof(char) * (size + 1));
+			if (data)
 			{
 				memcpy(data, other.data, size);
 				data[size] = '\0';
@@ -81,29 +81,36 @@ class minicurl
 				size = 0;
 			}
 		}
-		
+
 		chunk(chunk && other) : chunk()
 		{
 			swap(*this, other);
 		}
-		
+
 		chunk & operator=(chunk other)
 		{
 			swap(*this, other);
 			return *this;
 		}
-		
+
 		~chunk()
 		{
-			if(data)
+			if (data)
 			{
 				free(data);
 				data = nullptr;
 			}
 			size = 0;
 		}
+
+		void save(std::iostream& file)
+		{
+			// persist data as is, without the null terminator
+			file.write(data, size);
+			file.flush();
+		}
 		
-		auto to_string()
+		std::string to_string() const
 		{
 			std::string content = "";
 			if(size && data)
@@ -119,6 +126,51 @@ class minicurl
 		std::size_t status = 0;
 		chunk header;
 		chunk content;
+		
+		// response not found
+#pragma region Error Handling
+		bool isValid() const
+		{
+			return content.size > 1 && !hasErrors();
+		}
+		
+		bool hasErrors() const
+		{
+			std::string response = content.to_string();
+			return isNotFound(response) || isNotAuthorized(response);
+		}
+
+		bool isNotFound() const
+		{
+			return isNotFound(content.to_string());
+		}
+
+		bool isEmpty() const
+		{
+			return content.size == 0;
+		}
+
+		static bool isNotFound(const std::string& response)
+		{
+			return response.find("<title>404 ") != -1;
+		}
+
+		bool isNotAuthorized() const
+		{
+			return isNotAuthorized(content.to_string());
+		}
+
+		// response not authorized
+		static bool isNotAuthorized(const std::string& response)
+		{
+			return response.find("<title>403 ") != -1;
+		}
+#pragma endregion
+
+		void save(std::iostream& file)
+		{
+			content.save(file);
+		}
 		
 		friend auto swap(package & x, package & y)
 		{
@@ -428,22 +480,41 @@ class minicurl
 	{
 		if(url.size())
 		{
-			auto confirmed_filename = filename.size() ? filename : split(url, "/").back();
-			auto file = std::fstream(confirmed_filename, std::fstream::out | std::fstream::binary);
-			if(file.good())
+			// combile url and filename to get the full url path
+			package result = get_singleton().fetch(url, "", "", headers);
+			if (!result.isValid())
 			{
-				// combile url and filename to get the full url path
-				auto chunk = get_singleton().fetch(url, "", "", headers).content;
-				if(chunk.size > 1)
+				// report errors
+				if (result.isNotFound())
 				{
-					// persist data as is, without the null terminator
-					file.write(chunk.data, chunk.size);
-					file.flush();
+					std::cerr << "File not found: " << url << "\n";
 				}
-				file.close();
-				return confirmed_filename;
+				else if (result.isNotAuthorized())
+				{
+					std::cerr << "Access not authorized: " << url << "\n";
+				}
+				else
+				{
+					std::cerr << "No data returned: " << url << "\n";
+				}
+
+				return std::string("");
+			}
+			else
+			{
+				std::string confirmed_filename = filename.size() ? filename : split(url, "/").back();
+				std::fstream file = std::fstream(confirmed_filename, std::fstream::out | std::fstream::binary);
+				if (file.good())
+				{
+					// save file
+					result.save(file);
+
+					file.close();
+					return confirmed_filename;
+				}
 			}
 		}
+
 		return std::string("");
 	}
 };
