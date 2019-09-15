@@ -433,10 +433,12 @@ class minicurl
 			if(file.good())
 			{
 				// combile url and filename to get the full url path
-				auto chunk = get_singleton().fetch(url + filename, "", "", headers).content;
+				auto chunk = get_singleton().fetch(url, "", "", headers).content;
 				if(chunk.size > 1)
 				{
-					file << chunk.data << std::flush;
+					// persist data as is, without the null terminator
+					file.write(chunk.data, chunk.size);
+					file.flush();
 				}
 				file.close();
 				return confirmed_filename;
