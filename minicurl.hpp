@@ -42,7 +42,12 @@
 #include <cstring>
 #include <curl/curl.h>
 #include <iostream>
+#include <sstream>
 #include <fstream>
+#include <algorithm> 
+#include <functional> 
+#include <cctype>
+#include <locale>
 #include <string>
 #include <vector>
 
@@ -364,7 +369,49 @@ class minicurl
 		return realsize;
 	}
 	
-	package fetch(std::string const & url, std::string const & payload, std::string const & filename, std::vector<std::string> const & headers)
+	// trim from start (in place)
+	static inline void ltrim(std::string &s) 
+	{
+		s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int ch) 
+		{
+			return !std::isspace(ch) && ch != '\r' && ch != '\n';
+		}));
+	}
+
+	// trim from end (in place)
+	static inline void rtrim(std::string &s) 
+	{
+		s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) 
+		{
+			return !std::isspace(ch) && ch != '\r' && ch != '\n';
+		}).base(), s.end());
+	}
+
+	// trim from both ends (in place)
+	static inline void trim(std::string &s) 
+	{
+		ltrim(s);
+		rtrim(s);
+	}
+
+	static std::size_t get_content_length(const std::string& header)
+	{
+		std::string key, val;
+		std::istringstream iss(header);
+
+		while (std::getline(std::getline(iss, key, ':') >> std::ws, val))
+		{
+			trim(val);
+			if (key == "Content-Length")
+			{
+				return atol(val.c_str());
+			}
+		}
+
+		return 0;
+	}
+	
+	package fetch(std::string const & url, std::string const & payload, std::string const & filename, bool save_to_disk, std::vector<std::string> const & headers)
 	{
 		std::size_t status = 0;
 		chunk header;
@@ -375,9 +422,32 @@ class minicurl
 			CURL * curl = curl_easy_init();
 			if(curl)
 			{
-				curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_function);
+				// download file handle, if we are saving directly to disk
+				FILE * save_file = nullptr;
+
+				// upload file handle
+				FILE * upload_file = nullptr;
+
+				// make read timeout small because we are supporting retries
+				curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, 1000);
+
+				// save large files directly to disk
+				if (save_to_disk)
+				{
+					if (filename.size() && (save_file = fopen(filename.c_str(), "ab")))
+					{
+						// write curl response to file
+						curl_easy_setopt(curl, CURLOPT_FILE, save_file);
+						curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, true);
+					}
+				}
+				else
+				{
+					curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_function);
+					curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&content);
+				}
+
 				curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, write_function);
-				curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &content);
 				curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *) &header);
 
 				// Always setup the debug function to allow for activity to be tracked
@@ -390,15 +460,17 @@ class minicurl
 					curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload.c_str());
 				}
 				
-				FILE * file = nullptr;
-				if(filename.size() && (file = fopen(filename.c_str(), "rb")))
+				if (!save_to_disk)
 				{
-					struct stat file_stat;
-					if(fstat(fileno(file), &file_stat) == 0)
+					if (filename.size() && (upload_file = fopen(filename.c_str(), "rb")))
 					{
-						curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
-						curl_easy_setopt(curl, CURLOPT_READDATA, file);
-						curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, file_stat.st_size);
+						struct stat file_stat;
+						if (fstat(fileno(upload_file), &file_stat) == 0)
+						{
+							curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
+							curl_easy_setopt(curl, CURLOPT_READDATA, upload_file);
+							curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, file_stat.st_size);
+						}
 					}
 				}
 				
@@ -431,6 +503,33 @@ class minicurl
 				curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 
 				CURLcode res = curl_easy_perform(curl);
+				while (res = CURLE_PARTIAL_FILE)
+				{
+					std::size_t max_length = get_content_length(header.to_string());
+					std::size_t file_size;
+
+					if (save_to_disk)
+					{
+						fflush(save_file);
+
+						// get the number of bytes written and try again
+						fseek(save_file, 0L, SEEK_END);
+						file_size = ftell(save_file);
+					}
+					else
+					{
+						file_size = content.size;
+					}
+					
+					if (max_length <= file_size)
+					{
+						res = CURLE_OK;
+						break;
+					}
+					curl_easy_setopt(curl, CURLOPT_RESUME_FROM, file_size);
+					res = curl_easy_perform(curl);
+				}
+				
 				if(res == CURLE_OK)
 				{
 					long status_code = 0;
@@ -438,10 +537,16 @@ class minicurl
 					status = static_cast<std::size_t>(status_code);
 				}
 				
-				if(file)
+				if(save_file)
 				{
-					fclose(file);
+					fclose(save_file);
 				}
+
+				if (upload_file)
+				{
+					fclose(upload_file);
+				}
+
 				if(header_list)
 				{
 					curl_slist_free_all(header_list);
@@ -471,30 +576,42 @@ class minicurl
 	
 	static std::string get(std::string const & url, std::vector<std::string> const & headers = {})
 	{
-		return get_singleton().fetch(url, "", "", headers).content.to_string();
+		return get_singleton().fetch(url, "", "", false, headers).content.to_string();
 	}
 	
 	static std::string get_header(std::string const & url, std::vector<std::string> const & headers = {})
 	{
-		return get_singleton().fetch(url, "", "", headers).header.to_string();
+		return get_singleton().fetch(url, "", "", false, headers).header.to_string();
 	}
 	
 	static std::string post(std::string const & url, std::string const & payload, std::vector<std::string> const & headers = {"Content-Type: text/plain"})
 	{
-		return get_singleton().fetch(url, payload, "", headers).content.to_string();
+		return get_singleton().fetch(url, payload, "", false, headers).content.to_string();
 	}
 	
 	static std::string upload(std::string const & url, std::string const & filename, std::vector<std::string> const & headers = {"Content-Type: text/plain"})
 	{
-		return get_singleton().fetch(url, "", filename, headers).content.to_string();
+		return get_singleton().fetch(url, "", filename, false, headers).content.to_string();
+	}
+
+	static bool file_exists(const std::string& name) 
+	{
+		std::ifstream f(name.c_str());
+		return f.good();
 	}
 	
-	static std::string download(std::string const & url, std::string const & filename = "", std::vector<std::string> const & headers = {})
+	static std::string download(std::string const & url, std::string const & filename = "", bool save_to_disk=false, std::vector<std::string> const & headers = {})
 	{
 		if(url.size())
 		{
+			std::string confirmed_filename;
+			
+			// if saving directly to disk, the filename will be interpreted as the download file location path
+			if (save_to_disk)
+				confirmed_filename = filename.size() ? filename : split(url, "/").back();
+
 			// combile url and filename to get the full url path
-			package result = get_singleton().fetch(url, "", "", headers);
+			package result = get_singleton().fetch(url, "", confirmed_filename, save_to_disk, headers);
 			if (!result.isValid())
 			{
 				// report errors
@@ -515,15 +632,24 @@ class minicurl
 			}
 			else
 			{
-				std::string confirmed_filename = filename.size() ? filename : split(url, "/").back();
-				std::fstream file = std::fstream(confirmed_filename, std::fstream::out | std::fstream::binary);
-				if (file.good())
+				if (save_to_disk)
 				{
-					// save file
-					result.save(file);
+					// just check for the existence of the file
+					if (file_exists(confirmed_filename))
+						return confirmed_filename;
+				}
+				else
+				{
+					std::string confirmed_filename = filename.size() ? filename : split(url, "/").back();
+					std::fstream file = std::fstream(confirmed_filename, std::fstream::out | std::fstream::binary);
+					if (file.good())
+					{
+						// save file
+						result.save(file);
 
-					file.close();
-					return confirmed_filename;
+						file.close();
+						return confirmed_filename;
+					}
 				}
 			}
 		}
